@@ -14,3 +14,4 @@ A disciplina aborda conceitos fundamentais e técnicas de Machine Learning, incl
 🛠 Ferramentas
 * Google Colab para desenvolvimento e experimentação de modelos
 * Python e principais bibliotecas para ML (ex.: Scikit-learn, TensorFlow, Pandas, NumPy, Matplotlib)
+* API Alpha Vantage para consumo e análise de dados (https://www.alphavantage.co/documentation/)

@@ -237,28 +237,28 @@ Essa etapa é fundamental para garantir a integridade e funcionalidade do DataFr
 
 ---
 
-## Pipe 4 - Visualizações
+### Pipe 4 - Visualizações
 
 Apesar de a visualização estar originalmente prevista para a etapa **"14. Avaliação do modelo e visualizações: linhas temporais, dispersão e heatmaps"**, sua execução foi antecipada nesta pipeline com o objetivo de **compreender melhor a natureza dos dados antes da construção de variáveis e do treinamento de modelos preditivos**. Esta decisão visa garantir uma abordagem mais informada e eficaz para as transformações e análises subsequentes.
 
-### Resumo Estatístico e Estrutura dos Dados
+#### Resumo Estatístico e Estrutura dos Dados
 
 - O método `fx_btc_df.describe()` foi utilizado para gerar **estatísticas descritivas** das colunas numéricas, permitindo uma visão inicial de tendências centrais (média, mediana), dispersão (desvio padrão) e possíveis valores discrepantes (mínimos e máximos).
 - A inspeção com `fx_btc_df.info()` forneceu uma visão da **estrutura e integridade dos dados**, confirmando que não há valores nulos e que todas as colunas possuem o tipo `float64`, o que facilita o processamento e normalização subsequente.
 
-### Normalização dos Dados
+#### Normalização dos Dados
 
 - A transformação dos dados com `StandardScaler` foi aplicada para **padronizar as variáveis** (média zero e desvio padrão um), o que é uma prática essencial para algoritmos de modelagem que são sensíveis à escala, além de auxiliar na geração de gráficos comparáveis entre variáveis com magnitudes distintas.
 - O DataFrame `fx_btc_normalized_df` resultante foi criado para armazenar os dados normalizados, mantendo os nomes originais das colunas para facilitar a leitura e manipulação.
 
-### Linha Temporal de Fechamento do Câmbio e Bitcoin e Volume do Bitcoin
+#### Linha Temporal de Fechamento do Câmbio e Bitcoin e Volume do Bitcoin
 
 - Foi iniciado o uso da biblioteca `matplotlib.pyplot` para **visualização temporal das variáveis `fx_close`, `btc_close` e `btc_volume`**, ou seja, o **preço de fechamento do câmbio USD/BRL e Bitcoin e volume do Bitcoin ao longo do tempo**.
 - O gráfico de linha permite uma primeira percepção visual de **tendências, oscilações e possíveis sazonalidades**, servindo como base exploratória para a criação futura das variáveis como `variacao_cambio`, `variacao_btc` e `media_movel_btc`.
 
 Essa abordagem exploratória precoce foi fundamental para identificar comportamentos relevantes nos dados e apoiar decisões mais estratégicas nas transformações que serão realizadas na próxima etapa da pipeline.
 
-### Gráfico de Linhas – Série Temporal do Câmbio
+#### Gráfico de Linhas – Série Temporal do Câmbio
 
 ```
 plt.figure(figsize=(12, 5))
@@ -286,7 +286,7 @@ Exibir os valores de máximo (fx_high), mínimo (fx_low) e fechamento (fx_close)
 
 Essas informações são relevantes para criar variáveis derivadas, como variação percentual, amplitude ou média móvel.
 
-### Boxplots – Distribuição das Variáveis de Câmbio
+#### Boxplots – Distribuição das Variáveis de Câmbio
 
 ```
 sns.boxplot(x=fx_btc_df['fx_open']);
@@ -307,11 +307,11 @@ São úteis para:
 
 Essa visualização detalhada dos dados de câmbio reforça a importância de entender a variabilidade e dispersão dos preços, o que pode impactar diretamente no desempenho de modelos preditivos, principalmente os sensíveis à escala ou à presença de valores extremos.
 
-### Bitcoin (EUR)
+#### Bitcoin (EUR)
 
 Dando continuidade à fase de exploração visual dos dados, esta etapa foca na variável de criptoativo **Bitcoin**, cotado em **EUR**. Embora essas visualizações façam parte da etapa 14 ("Avaliação do modelo e visualizações"), elas foram antecipadas para apoiar o **entendimento da natureza e comportamento do ativo**, fundamental para decisões de modelagem, normalização e criação de features.
 
-### Gráfico de Linhas – Preço de Fechamento, Máximo e Mínimo do Bitcoin
+#### Gráfico de Linhas – Preço de Fechamento, Máximo e Mínimo do Bitcoin
 
 ```
 plt.figure(figsize=(12, 5))
@@ -339,7 +339,7 @@ Exibir os valores de fechamento, máximo e mínimo em conjunto permite observar:
 
 Essa visualização é essencial para decisões sobre normalização, redução de variância e detecção de outliers.
 
-### Gráfico de Linhas – Volume de Transações de Bitcoin
+#### Gráfico de Linhas – Volume de Transações de Bitcoin
 
 ```
 plt.figure(figsize=(12, 5))
@@ -357,7 +357,7 @@ O volume de transações é uma variável complementar e explicativa relevante.
 
 Flutuações no volume podem antecipar movimentos de preço ou indicar picos de interesse/comércio, úteis para modelagem preditiva.
 
-### Boxplots – Distribuições Estatísticas das Variáveis de Bitcoin
+#### Boxplots – Distribuições Estatísticas das Variáveis de Bitcoin
 
 ```
 sns.boxplot(x=fx_btc_df['btc_open']);
@@ -376,3 +376,119 @@ Essas visualizações antecipadas fornecem subsídios importantes para pré-proc
 ---
 
 ### Pipe 5 - Engenharia de Atributos
+
+#### Variação de Câmbio USD/BRL
+
+A criação da variável `fx_variation` tem como finalidade calcular a variação diária do valor de fechamento do câmbio USD/BRL. Esse tipo de variável é essencial para análises de séries temporais financeiras, pois permite observar tendências, flutuações e possíveis padrões de comportamento do mercado cambial ao longo do tempo.
+
+```
+fx_btc_df['fx_variation'] = fx_btc_df['fx_close'].diff().shift(-1)
+```
+
+Essa linha de código realiza os seguintes passos:
+
+diff(): calcula a diferença entre o valor de fechamento (fx_close) do dia seguinte e o do dia atual. Isto é, fx_close(t+1) - fx_close(t).
+
+shift(-1): desloca os resultados para cima uma linha, de modo que a variação entre o dia t e o dia t+1 seja atribuída corretamente à linha do dia t.
+
+Isso resulta em uma nova coluna fx_variation, que representa a Variação do Câmbio USD/BRL, conforme a seguinte fórmula:
+
+fx_variation
+𝑡
+=
+fx_close
+𝑡
++
+1
+−
+fx_close
+𝑡
+fx_variation 
+t
+​
+ =fx_close 
+t+1
+​
+ −fx_close 
+t
+
+Essa transformação atende ao item 4. Cálculo das variáveis, mais especificamente ao subitem:
+
+Variacao_cambio = fechamento USD/BRL atual - anterior
+
+Contudo, a implementação opta por calcular a variação futura relativa ao ponto atual, o que é uma abordagem comum em análises preditivas onde o objetivo pode ser, por exemplo, antecipar movimentos de mercado. A inclusão dessa variável no dataset permite que o modelo identifique como mudanças no câmbio se relacionam com outros indicadores, como o preço do Bitcoin ou o volume de transações.
+
+#### Variação do Bitcoin (EUR)
+
+A criação da variável `btc_variation` visa calcular a variação diária do preço de fechamento do Bitcoin (em euros). Essa métrica é crucial para entender os movimentos de mercado do BTC, identificar tendências de valorização ou desvalorização, e correlacionar seu comportamento com outras variáveis, como o câmbio USD/BRL.
+
+```
+fx_btc_df['btc_variation'] = fx_btc_df['btc_close'].diff().shift(-1)
+```
+
+Essa linha realiza duas operações:
+
+diff(): calcula a diferença entre o valor de fechamento de BTC no dia seguinte e o valor atual. Isto é, btc_close(t+1) - btc_close(t).
+
+shift(-1): desloca os resultados uma linha para cima, atribuindo corretamente a variação entre os dias t e t+1 à linha correspondente ao dia t.
+
+Com isso, a coluna btc_variation passa a representar a variação futura no fechamento do Bitcoin com base na seguinte fórmula:
+
+btc_variation
+𝑡
+=
+btc_close
+𝑡
++
+1
+−
+btc_close
+𝑡
+btc_variation 
+t
+​
+ =btc_close 
+t+1
+​
+ −btc_close 
+t
+
+Essa transformação atende ao requisito especificado no item:
+
+Variacao_btc = fechamento BTC atual - anterior
+
+No entanto, assim como na variável fx_variation, a escolha de aplicar shift(-1) inverte o cálculo tradicional para destacar a variação futura a partir do ponto de vista da data atual. Essa abordagem é amplamente utilizada em problemas de predição, onde o objetivo é estimar o que acontecerá no próximo período com base nos dados conhecidos hoje.
+
+Essa variável pode ser particularmente útil como variável alvo (target) ou como indicador de performance de curto prazo em modelos de machine learning voltados para previsão de preços ou análise de risco de investimentos.
+
+#### Média Móvel do Bitcoin (EUR)
+
+A criação da variável `btc_moving_average` tem como objetivo calcular a **média móvel dos preços de fechamento do Bitcoin (em EUR)**, considerando os **últimos 5 dias anteriores** à data atual. Essa métrica suaviza flutuações de curto prazo e ajuda a identificar tendências mais estáveis no comportamento do ativo ao longo do tempo.
+
+```
+fx_btc_df['btc_moving_average'] = fx_btc_df['btc_close'].shift(1).rolling(window=5).mean()
+```
+
+Essa linha realiza duas operações fundamentais:
+
+shift(1): desloca os dados de btc_close para que a média móvel de uma linha seja calculada com base apenas nos dias anteriores, evitando vazamentos de dados futuros (data leakage).
+
+rolling(window=5).mean(): aplica uma janela deslizante de 5 dias e calcula a média dos valores deslocados, ou seja, a média dos cinco fechamentos anteriores ao dia corrente.
+
+Fórmula
+  
+i=t−5
+∑
+t−1
+​
+ btc_close 
+i
+​
+
+Os primeiros cinco valores da média móvel são NaN, pois não há dados suficientes para compor uma janela de cinco dias completos.
+
+Essa transformação atende ao requisito descrito no item:
+
+Media_movel_btc = média dos últimos 5 dias do fechamento do BTC
+
+Além disso, o uso da função shift(1) garante que a média calculada para o dia t não inclua o valor do próprio dia, preservando a lógica de um indicador retrospectivo — aspecto essencial para aplicações em análise de séries temporais, modelos preditivos e estratégias de investimento baseadas em médias móveis (como cruzamento de médias).

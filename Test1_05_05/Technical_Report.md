@@ -78,7 +78,7 @@ Essa etapa é fundamental para garantir que todas as ferramentas estejam devidam
 
 Nesta etapa, são realizadas as requisições à API **Alpha Vantage** para coleta de duas fontes de dados distintas: a variação diária do câmbio **USD/BRL** e os dados históricos diários do **Bitcoin em EUR**. Ambas as fontes serão posteriormente ajustadas para refletir apenas os **últimos 90 dias** na próxima etapa da pipeline.
 
-#### Subpipe 2.1 – Coleta da Variação Diária USD/BRL com `FX_DAILY`
+#### Coleta da Variação Diária USD/BRL com `FX_DAILY`
 
 Utilizamos a função `FX_DAILY` da API para acessar a série temporal de câmbio entre o dólar americano (USD) e o real brasileiro (BRL). A requisição é feita por meio de uma URL específica:
 
@@ -99,7 +99,7 @@ fx_df = fx_df.sort_index()
 
 A opção outputsize=full permite obter uma série histórica completa, e a filtragem para os últimos 90 dias será implementada na próxima pipe, garantindo maior flexibilidade no recorte temporal.
 
-#### Subpipe 2.2 – Coleta dos Dados de Bitcoin com DIGITAL_CURRENCY_DAILY
+#### Coleta dos Dados de Bitcoin com DIGITAL_CURRENCY_DAILY
 A coleta dos dados do Bitcoin é feita utilizando o endpoint DIGITAL_CURRENCY_DAILY, com foco no par BTC/EUR:
 
 ```
@@ -119,7 +119,7 @@ btc_df = btc_df.sort_index()
 
 Essa estrutura permite o acesso direto às colunas de preços de abertura, fechamento, máxima, mínima e volume diário em EUR, sendo todos dados úteis para análise cruzada com a variação cambial.
 
-#### Subpipe 2.3 – Alinhamento Temporal e Merge das Duas Fontes
+#### Alinhamento Temporal e Merge das Duas Fontes
 
 Para permitir análises conjuntas entre o comportamento do Bitcoin e a variação cambial do dólar, as duas bases são unificadas por meio de um merge temporal pelas datas:
 
@@ -137,7 +137,7 @@ Essa etapa é fundamental para garantir a qualidade e coerência temporal dos da
 
 Com as bases de dados cambial e criptoeconômica devidamente integradas e ordenadas, esta etapa tem como objetivo aplicar os requisitos específicos propostos na prova, garantindo que o conjunto final de dados esteja pronto para análise conforme o escopo definido.
 
-#### Subpipe 3.1 – Filtro do DataFrame para os Últimos 90 Dias
+#### Filtro do DataFrame para os Últimos 90 Dias
 
 Neste subpipe, é implementado o recorte temporal dos dados, limitando a amostra aos **últimos 90 dias** disponíveis. Essa filtragem é realizada utilizando o método `tail(90)` do pandas:
 
@@ -149,7 +149,7 @@ Esse comando seleciona as 90 linhas mais recentes do DataFrame, considerando a o
 
 A aplicação deste filtro é essencial para manter a relevância temporal da análise e evitar que dados muito antigos distorçam os resultados ou a interpretação de tendências recentes. Com isso, o foco permanece em um horizonte de tempo curto e mais significativo do ponto de vista econômico e financeiro.
 
-### Subpipe 3.2 – Renomeação dos Atributos para Facilitar a Leitura
+### Renomeação dos Atributos para Facilitar a Leitura
 
 Após o recorte temporal, os nomes das colunas no DataFrame ainda seguem a nomenclatura original da API da Alpha Vantage, o que pode comprometer a legibilidade e a clareza do conjunto de dados. Assim, realiza-se a renomeação dos atributos com identificadores mais intuitivos e padronizados:
 
@@ -171,7 +171,7 @@ Essa transformação tem como objetivo melhorar a usabilidade do dataset em aná
 
 A clareza na nomenclatura é um fator importante para a manutenção e compreensão do código, especialmente em contextos de trabalho colaborativo ou avaliações acadêmicas, como é o caso desta prova.
 
-### Subpipe 3.3 – Redefinição dos Tipos dos Dados
+### Redefinição dos Tipos dos Dados
 
 Com os dados já filtrados e os nomes das colunas devidamente ajustados, esta subetapa trata da conversão dos tipos de dados para formatos numéricos adequados às análises quantitativas que serão realizadas posteriormente.
 
@@ -434,24 +434,7 @@ shift(-1): desloca os resultados uma linha para cima, atribuindo corretamente a 
 
 Com isso, a coluna btc_variation passa a representar a variação futura no fechamento do Bitcoin com base na seguinte fórmula:
 
-btc_variation
-𝑡
-=
-btc_close
-𝑡
-+
-1
-−
-btc_close
-𝑡
-btc_variation 
-t
-​
- =btc_close 
-t+1
-​
- −btc_close 
-t
+btc_variation t = (btc_close t + 1) − btc_close t
 
 Essa transformação atende ao requisito especificado no item:
 
@@ -589,3 +572,86 @@ fx_btc_df['scenario'] = fx_btc_df.apply(define_scenario, axis=1)
     - Manutenção da consistência com a interpretação econômica: Cada cenário representa uma leitura econômica coerente para auxiliar nos modelos de classificação e decisões baseadas em contexto de mercado.
 
 Com isso, o atributo scenario está devidamente categorizado e pronto para ser utilizado como variável-alvo em modelos supervisionados. Ele reflete com fidelidade a conjuntura diária combinada dos mercados de criptoativos e câmbio.
+
+### Pipe 6 - Normalização dos Dados
+
+A etapa de normalização é fundamental no pré-processamento de dados, especialmente para modelos que utilizam medidas de distância ou distribuições estatísticas, como o Naive Bayes. A seguir, detalhamos as subetapas desse processo com suas respectivas justificativas técnicas.
+
+#### Separação de Atributos Preditores e Classe
+
+```
+x_fx_btc = fx_btc_df.iloc[:, 9:12].values
+x_fx_btc.shape
+```
+
+```
+y_fx_btc = fx_btc_df.iloc[:, 12].values
+y_fx_btc.shape
+```
+
+- **Objetivo**: Isolar os atributos preditores (fx_variation, btc_variation, btc_moving_average) da variável-alvo (scenario) para permitir o treinamento adequado dos modelos.
+
+- **Justificativa técnica**:
+
+    - Separar entrada e saída é essencial para qualquer tarefa supervisionada.
+
+    - Garante que a variável-alvo não interfira na normalização nem nas etapas subsequentes de modelagem.
+
+    - O uso de .iloc[:, 9:12] é apropriado, pois os atributos de interesse estão posicionados nessas colunas do DataFrame.
+
+#### Padronização dos Dados
+
+```
+x_fx_btc = standardScaler.fit_transform(x_fx_btc)
+```
+
+- **Objetivo**: Padronizar os dados (z-score), transformando-os para que tenham média 0 e desvio padrão 1.
+
+- **Justificativa técnica**:
+
+    - Algoritmos como o Naive Bayes podem se beneficiar da padronização, pois distribuições mais próximas da normal ajudam a modelagem probabilística.
+
+    - Melhora a estabilidade numérica e evita que variáveis com escalas diferentes tenham peso desproporcional na modelagem.
+
+    - Apesar do Naive Bayes ser teoricamente robusto a escala, na prática, a normalização contribui para melhor desempenho com dados contínuos (como variância Gaussiana).
+
+Separação dos Dados de Treinamento e Teste
+
+```
+x_fx_btc_train, x_fx_btc_test, y_fx_btc_train, y_fx_btc_test = train_test_split(
+    x_fx_btc, y_fx_btc, test_size=0.20, random_state=0
+)
+```
+
+- **Objetivo**: Dividir os dados em conjuntos de treinamento e teste, garantindo a avaliação imparcial do desempenho do modelo.
+
+- **Justificativa técnica**:
+
+    - A separação evita vazamento de informação (data leakage), garantindo que o modelo não "veja" os dados de teste durante o treinamento.
+
+    - O parâmetro test_size=0.20 define que 20% dos dados serão usados para teste, o que é adequado para conjuntos pequenos (como os 90 registros do dataframe).
+
+    - O random_state=0 assegura reprodutibilidade dos resultados, importante para fins de validação e comparação de desempenho entre diferentes modelos e experimentos.
+
+Com essas etapas, os dados estão preparados de maneira apropriada para alimentar algoritmos de aprendizado de máquina, garantindo integridade estatística e coerência com boas práticas de pré-processamento.
+
+### Pipe 7 - Conversão e Exportação de Arquivo para Ingestão Neural de Dados
+
+```
+with open('/content/drive/MyDrive/machine_learning_semestre_5/Pickle/fx_btc.pkl', mode='wb') as f:
+  pickle.dump([x_fx_btc_train, x_fx_btc_test, y_fx_btc_train, y_fx_btc_test], f)
+```
+
+- **Objetivo**: Persistir os dados pré-processados (atributos e classes de treino e teste) em disco para reutilização em etapas posteriores de modelagem e treinamento, como em redes neurais ou outros algoritmos de machine learning.
+
+- **Justificativa técnica**:
+
+    - Eficiência e modularidade: Ao salvar os dados já preparados, evitamos repetir etapas de pré-processamento em execuções futuras, tornando o pipeline mais eficiente.
+
+    - Padronização do fluxo de trabalho: A exportação em formato .pkl (via pickle) é compatível com diversas bibliotecas de machine learning e deep learning, como Scikit-learn, TensorFlow e PyTorch.
+
+    - Reprodutibilidade: Armazenar os conjuntos de treino e teste com os mesmos dados utilizados na fase de normalização e split garante que experimentos futuros sejam realizados nas mesmas condições.
+
+    - Organização: A escolha de um caminho específico no Google Drive (/content/drive/...) permite integração direta com o ambiente do Google Colab, facilitando a continuidade do trabalho entre sessões e dispositivos.
+
+Com essa abordagem, os dados ficam prontos para serem ingeridos diretamente por arquiteturas neurais ou outros modelos de forma estruturada, rápida e confiável.

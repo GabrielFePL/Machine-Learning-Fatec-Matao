@@ -573,6 +573,8 @@ fx_btc_df['scenario'] = fx_btc_df.apply(define_scenario, axis=1)
 
 Com isso, o atributo scenario está devidamente categorizado e pronto para ser utilizado como variável-alvo em modelos supervisionados. Ele reflete com fidelidade a conjuntura diária combinada dos mercados de criptoativos e câmbio.
 
+---
+
 ### Pipe 6 - Normalização dos Dados
 
 A etapa de normalização é fundamental no pré-processamento de dados, especialmente para modelos que utilizam medidas de distância ou distribuições estatísticas, como o Naive Bayes. A seguir, detalhamos as subetapas desse processo com suas respectivas justificativas técnicas.
@@ -634,6 +636,8 @@ x_fx_btc_train, x_fx_btc_test, y_fx_btc_train, y_fx_btc_test = train_test_split(
     - O random_state=0 assegura reprodutibilidade dos resultados, importante para fins de validação e comparação de desempenho entre diferentes modelos e experimentos.
 
 Com essas etapas, os dados estão preparados de maneira apropriada para alimentar algoritmos de aprendizado de máquina, garantindo integridade estatística e coerência com boas práticas de pré-processamento.
+
+---
 
 ### Pipe 7 - Conversão e Exportação de Arquivo para Ingestão Neural de Dados
 

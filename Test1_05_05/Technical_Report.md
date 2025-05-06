@@ -492,3 +492,100 @@ Essa transformação atende ao requisito descrito no item:
 Media_movel_btc = média dos últimos 5 dias do fechamento do BTC
 
 Além disso, o uso da função shift(1) garante que a média calculada para o dia t não inclua o valor do próprio dia, preservando a lógica de um indicador retrospectivo — aspecto essencial para aplicações em análise de séries temporais, modelos preditivos e estratégias de investimento baseadas em médias móveis (como cruzamento de médias).
+
+#### Tratamento de Valores Faltantes após Aplicação de Engenharia de Atributos
+
+Após a criação de novos atributos derivados no processo de engenharia de atributos, surgiram alguns valores faltantes (NaNs), principalmente nas colunas `fx_variation`, `btc_variation` e `btc_moving_average`. A seguir, descrevemos as estratégias adotadas para lidar com esses valores ausentes, justificando tecnicamente cada decisão:
+
+**Preenchimento de `fx_variation` e `btc_variation` com zero**
+
+- **Motivação**: As colunas `fx_variation` e `btc_variation` representam variações de preço entre dias consecutivos. Como essas colunas são obtidas por meio da diferença entre valores de fechamento em dias subsequentes, o primeiro valor (ou um valor resultante de uma ausência anterior) naturalmente se torna nulo.
+- **Estratégia adotada**: Preencher com `0` os valores ausentes dessas colunas.
+- **Justificativa técnica**:
+  - Preencher com a média ou interpolação introduziria viés, especialmente no início da série.
+  - Zero representa uma variação neutra, que é uma escolha segura e coerente quando não há dados anteriores disponíveis.
+  - Essa abordagem evita distorções nos modelos de machine learning, que podem interpretar valores ausentes como informações relevantes.
+
+```
+fx_btc_df['fx_variation'] = fx_btc_df['fx_variation'].fillna(0)
+fx_btc_df['btc_variation'] = fx_btc_df['btc_variation'].fillna(0)
+```
+
+**Preenchimento de `btc_moving_average` com dados reais anteriores ao recorte final**
+
+- **Motivação**: A coluna `btc_moving_average` foi criada como uma média móvel de 5 dias do preço de fechamento do BTC, deslocada uma posição no tempo (shift(1)). Naturalmente, os primeiros 4 valores da série são NaN, pois não há dados anteriores suficientes dentro do recorte de 90 dias usado no dataframe final.
+
+- **Estratégia adotada**: Utilizamos dados reais anteriores aos 90 dias finais que foram descartados no recorte final, mas estavam disponíveis por terem sido retornados na requisição original à API. Esses dados foram utilizados para calcular os primeiros valores de btc_moving_average de maneira legítima e alinhada com a natureza sequencial da série temporal.
+
+```
+prev_five_fx_btc_df = pd.merge(fx_df, btc_df, left_index=True, right_index=True, how='inner')
+prev_five_fx_btc_df = prev_five_fx_btc_df.tail(95)
+prev_five_fx_btc_df = prev_five_fx_btc_df.head(10)
+prev_five_fx_btc_df['btc_moving_average'] = (
+    prev_five_fx_btc_df['4. close_y'].shift(1).rolling(window=5).mean()
+)
+prev_five_fx_btc_df = prev_five_fx_btc_df.tail(5)
+```
+
+- **Justificativa técnica**:
+    - Essa abordagem mantém a coerência temporal dos dados e evita imputações artificiais que poderiam comprometer a integridade da série.
+
+    - O uso de dados reais respeita a cronologia e mantém a qualidade do atributo para fins preditivos.
+
+Com essas decisões, asseguramos que o dataframe fx_btc_df esteja livre de valores ausentes nas colunas derivadas, sem comprometer a qualidade e a fidelidade dos dados originais. Essa preparação é essencial para garantir a performance e a confiabilidade dos modelos de aprendizado de máquina subsequentes.
+
+#### Definição do Atributo Alvo (Target)
+
+Durante o processo de engenharia de atributos, foi necessário criar a variável-alvo `scenario`, que representa o cenário econômico classificado em três categorias com base nas variações do Bitcoin (BTC) e da taxa de câmbio USD/BRL (FX). A seguir, descrevemos as motivações e justificativas técnicas para a lógica utilizada nessa criação:
+
+**Objetivo da variável `scenario`**
+
+- Representar o contexto econômico diário com base nas movimentações do Bitcoin e do dólar.
+- Facilitar a classificação de cenários para fins de modelagem preditiva, especialmente com algoritmos probabilísticos como o Naive Bayes.
+
+**Critérios originais sugeridos**
+
+| Variação BTC | Variação Câmbio | Classificação      |
+|--------------|------------------|--------------------|
+| > 0          | > 0              | Crypto-Friendly    |
+| > 0          | < 0              | Neutral            |
+| < 0          | > 0              | Conservative       |
+| < 0          | < 0              | Neutral            |
+
+Essas regras foram elaboradas com base na interpretação econômica dos movimentos:
+
+- **Crypto-Friendly**: Ambiente favorável para ativos digitais, com valorização do BTC e alta do dólar (indicando fuga para alternativas).
+- **Conservative**: BTC em queda, com dólar valorizando (cenário de aversão ao risco e desvalorização do real).
+- **Neutral**: Quando o BTC apresenta pouca variação (lateralizado) ou ambos os ativos se desvalorizam, sugerindo um ambiente neutro ou de menor atratividade para decisões estratégicas baseadas em risco.
+
+**Alteração técnica implementada**
+
+Na prática, a variação do BTC próxima de zero foi considerada uma condição de lateralização. Para isso, adotou-se o intervalo de ±2% como limite de neutralidade. Isso se justifica da seguinte forma:
+
+- **Tolerância de ±2%**: Considera ruído de mercado e volatilidade diária normal. Um movimento inferior a esse intervalo é considerado lateral, representando ausência de tendência definida.
+
+**Implementação em código:**
+
+```
+def define_scenario(row):
+    if abs(row['btc_variation']) <= 0.02 and abs(row['btc_variation']) >= -0.02:
+        return 'Neutral'
+    elif row['btc_variation'] > 0.02 and row['fx_variation'] > 0:
+        return 'Crypto-Friendly'
+    elif row['btc_variation'] < 0.02 and row['fx_variation'] > 0:
+        return 'Conservative'
+    else:
+        return 'Neutral'
+
+fx_btc_df['scenario'] = fx_btc_df.apply(define_scenario, axis=1)
+```
+
+- **Justificativa técnica da implementação**:
+
+    - Uso de .apply() com axis=1: Necessário para aplicar a lógica linha a linha, pois cada decisão depende da combinação entre btc_variation e fx_variation.
+
+    - Condições explícitas e priorização da lateralização: A primeira verificação garante que valores com baixa oscilação no BTC sejam marcados como Neutral antes de qualquer outra lógica ser avaliada.
+
+    - Manutenção da consistência com a interpretação econômica: Cada cenário representa uma leitura econômica coerente para auxiliar nos modelos de classificação e decisões baseadas em contexto de mercado.
+
+Com isso, o atributo scenario está devidamente categorizado e pronto para ser utilizado como variável-alvo em modelos supervisionados. Ele reflete com fidelidade a conjuntura diária combinada dos mercados de criptoativos e câmbio.

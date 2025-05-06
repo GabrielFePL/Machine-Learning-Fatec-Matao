@@ -659,3 +659,130 @@ with open('/content/drive/MyDrive/machine_learning_semestre_5/Pickle/fx_btc.pkl'
     - Organização: A escolha de um caminho específico no Google Drive (/content/drive/...) permite integração direta com o ambiente do Google Colab, facilitando a continuidade do trabalho entre sessões e dispositivos.
 
 Com essa abordagem, os dados ficam prontos para serem ingeridos diretamente por arquiteturas neurais ou outros modelos de forma estruturada, rápida e confiável.
+
+### Pipe 8 - Importação de Bibliotecas
+
+```
+from sklearn.naive_bayes import GaussianNB
+from sklearn.metrics import accuracy_score, classification_report
+from yellowbrick.classifier import ConfusionMatrix
+from collections import Counter
+```
+
+- **Objetivo**: Preparar o ambiente com bibliotecas essenciais para construção, avaliação e interpretação de um modelo de classificação baseado no algoritmo Naive Bayes.
+
+- **Justificativa técnica**:
+
+    - GaussianNB (Scikit-learn): Implementa o algoritmo Naive Bayes Gaussiano, adequado para variáveis contínuas e normalmente distribuídas, como as variações e médias móveis utilizadas nos atributos preditores do modelo.
+
+    - accuracy_score e classification_report (Scikit-learn): Ferramentas fundamentais para mensurar o desempenho do modelo. O accuracy_score fornece a acurácia global da classificação, enquanto o classification_report detalha métricas por classe (precisão, revocação e F1-score), o que é crucial para avaliar o desempenho em cenários multiclasses como "Crypto-Friendly", "Neutral" e "Conservative".
+
+    - ConfusionMatrix (Yellowbrick): Permite a visualização gráfica da matriz de confusão, facilitando a análise de erros do modelo ao identificar quais classes são mais frequentemente confundidas entre si.
+
+    - Counter (collections): Utilizado para verificar o balanceamento das classes no conjunto de dados, o que pode impactar diretamente o desempenho e a imparcialidade do classificador.
+
+Com essas bibliotecas, o pipeline está pronto para construir e interpretar um modelo bayesiano robusto, com suporte a análise estatística, visualização de resultados e diagnóstico de performance multiclasse.
+
+### Pipe 9 - Carregamento dos Dados para Ingestão Neural
+
+```
+with open('/content/drive/MyDrive/machine_learning_semestre_5/Pickle/fx_btc.pkl', 'rb') as f:
+  x_fx_btc_train, x_fx_btc_test, y_fx_btc_train, y_fx_btc_test = pickle.load(f)
+```
+
+- **Objetivo**: Realizar o carregamento dos dados previamente normalizados e particionados em treino e teste, a partir de um arquivo .pkl, para uso direto em modelos de aprendizado de máquina ou redes neurais.
+
+- **Justificativa técnica**:
+
+    - Continuidade do pipeline: Essa etapa permite retomar o fluxo de trabalho a partir de onde foi interrompido, utilizando exatamente os mesmos dados pré-processados, garantindo consistência entre sessões de modelagem.
+
+    - Reprodutibilidade: Ao utilizar os mesmos dados carregados de forma padronizada, assegura-se que os resultados obtidos em testes e treinamentos sejam reproduzíveis, sem variações causadas por pré-processamentos repetidos ou aleatórios.
+
+    - Eficiência operacional: O uso do pickle.load() reduz o tempo de preparação ao evitar que as etapas de transformação, normalização e divisão dos dados sejam reexecutadas, economizando recursos computacionais e tempo.
+
+    - Integração com Google Drive: O caminho definido em /content/drive/... garante que o arquivo carregado esteja disponível no ambiente do Google Colab, promovendo portabilidade e facilidade de acesso entre diferentes dispositivos ou sessões.
+
+Dessa forma, os dados ficam prontos para serem utilizados de maneira rápida, segura e estruturada em qualquer modelo de aprendizado supervisionado, incluindo redes neurais.
+
+### Pipe 10 - Ingestão Neural e Testagem de Neurônio Artificial GaussianNB
+
+```
+gnb_fx_btc = GaussianNB()
+gnb_fx_btc.fit(x_fx_btc_train, y_fx_btc_train)
+
+gnb_fx_btc_predict = gnb_fx_btc.predict(x_fx_btc_test)
+```
+
+- **Objetivo**: Realizar o treinamento de um modelo de classificação baseado no algoritmo Naive Bayes Gaussiano (GaussianNB), utilizando os dados previamente normalizados e divididos em treino e teste. A seguir, gerar as previsões a partir do modelo treinado sobre os dados de teste.
+
+- **Justificativa técnica**:
+
+    - Algoritmo probabilístico robusto: O GaussianNB é uma variação do algoritmo Naive Bayes, que assume que os atributos seguem uma distribuição normal. Ele é eficaz para tarefas de classificação com conjuntos de dados contínuos e é particularmente útil em problemas com alta dimensionalidade e independência entre atributos.
+
+    - Velocidade de treinamento: O GaussianNB é extremamente rápido tanto no treinamento quanto na predição, sendo adequado para análises preliminares, validações cruzadas e testes de hipóteses sobre a capacidade discriminativa dos dados.
+
+    - Baixa complexidade computacional: Por não exigir hiperparâmetros complexos ou redes neurais profundas, o modelo pode ser treinado mesmo em ambientes com limitações computacionais, como o Google Colab gratuito.
+
+    - Aplicabilidade à ingestão neural: Embora o GaussianNB não seja um neurônio artificial no sentido das redes neurais profundas, ele simula um comportamento de classificador neural básico, sendo uma excelente etapa inicial de teste antes de partir para arquiteturas mais sofisticadas, como MLPs ou CNNs.
+
+    - Compatibilidade com frameworks de avaliação: O resultado da predição (gnb_fx_btc_predict) pode ser utilizado com métricas de avaliação como accuracy, classification report e confusion matrix, fornecendo uma base clara para comparação com modelos mais complexos.
+
+Assim, essa pipe implementa de forma eficaz o requisito de Treinamento com GaussianNB, servindo como ponto de partida confiável e interpretável para análises de desempenho em classificadores supervisionados.
+
+### Pipe 11 - Avaliação do Modelo  
+
+```
+gnb_fx_btc_accuracy = accuracy_score(y_fx_btc_test, gnb_fx_btc_predict)
+print('P(A) = ' + str(round((gnb_fx_btc_accuracy * 100), 2)) + '%')
+```
+
+#### Cálculo probabilístico com Teorema de Bayes
+
+```
+classes = np.unique(np.concatenate((y_fx_btc_test, gnb_fx_btc_predict)))
+bayes_results = {}
+for cls in classes:
+    p_b = np.sum(gnb_fx_btc_predict == cls) / len(gnb_fx_btc_predict)
+    p_a = np.sum(y_fx_btc_test == cls) / len(y_fx_btc_test)
+    mask = y_fx_btc_test == cls
+    p_b_a = np.sum(gnb_fx_btc_predict[mask] == cls) / np.sum(mask) if np.sum(mask) > 0 else 0
+    p_a_b = (p_b_a * p_a) / p_b if p_b > 0 else 0
+    bayes_results[cls] = {
+        'P(A)': round(p_a, 3),
+        'P(B)': round(p_b, 3),
+        'P(B|A)': round(p_b_a, 3),
+        'P(A|B)': round(p_a_b, 3)
+    }
+bayes_df = pd.DataFrame(bayes_results).T
+print(bayes_df)
+```
+
+#### Matriz de confusão
+
+```
+gnb_fx_btc_cm = ConfusionMatrix(gnb_fx_btc)
+gnb_fx_btc_cm.fit(x_fx_btc_train, y_fx_btc_train)
+gnb_fx_btc_cm.score(x_fx_btc_test, y_fx_btc_test)
+```
+
+#### Relatório de Classificação
+
+```
+print(classification_report(y_fx_btc_test, gnb_fx_btc_predict))
+```
+
+- **Objetivo**: Avaliar o desempenho do classificador GaussianNB a partir de métricas quantitativas e qualitativas, utilizando medidas estatísticas como accuracy, matriz de confusão, relatório de classificação e o Teorema de Bayes para análise probabilística dos resultados.
+
+- **Justificativa técnica**:
+
+    - Precisão geral (Accuracy): A métrica accuracy_score fornece uma visão direta da taxa de acerto do modelo em relação ao total de amostras de teste, sendo uma medida base para validação de classificadores.
+
+    - Probabilidade condicional via Teorema de Bayes: O cálculo das probabilidades 𝑃(𝐴), 𝑃(𝐵), 𝑃(𝐵∣𝐴) e 𝑃(𝐴∣𝐵) permite avaliar a coerência das predições do modelo sob uma ótica estatística, fornecendo insights sobre o comportamento das classes previstas em relação às classes reais.
+
+    - Interpretação qualitativa com matriz de confusão: A visualização das predições corretas e incorretas para cada classe permite detectar tendências de erro, como confusões recorrentes entre categorias semelhantes.
+
+    - Relatório de desempenho detalhado: O classification_report agrega informações sobre precisão (precision), revocação (recall) e f1-score, possibilitando uma análise equilibrada do modelo em contextos de classes desbalanceadas.
+
+    - Validação visual e interpretável: A matriz de confusão gerada com Yellowbrick fornece uma interface gráfica que auxilia na interpretação rápida e intuitiva dos resultados, mesmo por usuários não especialistas.
+
+Essa pipe implementa com rigor o requisito 14 - Avaliação do Modelo, entregando um conjunto completo de métricas fundamentais para a análise de classificadores supervisionados, baseando-se em boas práticas estatísticas e de machine learning.
